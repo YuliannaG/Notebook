@@ -4,8 +4,8 @@ setup(
     name='smart_bot',
     version='0.1.0',
     description='bot with function adressbook, notes and sorter',
-    author='AndrewAndrunin, YuliannaG, vitaliy-2607',
-    author_email='andry.andrynin@gmail.com',
+    author='YuliannaG, AndrewAndrunin, vitaliy-2607',
+    author_email='yulianna.iva@gmail.com',
     license='MIT',
     classifiers=[
             "Programming Language :: Python :: 3.10",

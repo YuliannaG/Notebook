@@ -1,8 +1,9 @@
-from goit_project1.AddressBook import *
-from goit_project1.AddressBook import main as addressbook
+from AddressBook import *
+from AddressBook import main as addressbook
 from Notes import *
 from Notes import main as notes
-from goit_project1.Sorter import *
+from Sorter import *
+
 
 def main():
     print('Hello, this bot has 3 functions:')
@@ -25,6 +26,7 @@ def main():
             break
         else:
             print('Wrong command, print help to get more information or exit to turn off this bot')
+
 
 if __name__ == "__main__":
     main()

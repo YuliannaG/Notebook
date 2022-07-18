@@ -53,7 +53,6 @@ class AddressBook(UserDict):
         else:  
             return f'{", ".join(searched_profiles)} have birthday at {day_end.strftime("%d %B %Y")}.'       
 
-
     def search_common(searched_text):
         searched_profiles = []
         for k, v in phone_book.data.items():
@@ -72,7 +71,6 @@ class AddressBook(UserDict):
                 self.data.pop(contact_name)
                 return f'Contact {contact_name} deleted from database'
         return f'Contact {contact_name} isn`t exist in database'
-
 
     def iterator(self, num):
         counter = 0
@@ -298,10 +296,15 @@ def input_error(func):
 
 ### Кастомні помилки
 
+
 class EmailError(Exception):
     pass
+
+
 class PhoneError(Exception):
     pass
+
+
 class DateError(Exception):
     pass
 
@@ -376,6 +379,7 @@ def add_birthday(*args):
         rec.birthday = Birthday(args[1])
         return f'Birthday is updated to {rec.birthday.value.strftime("%d.%m.%Y")}'
 
+
 @input_error
 def add_email(*args):
     rec = phone_book[args[0]]
@@ -390,6 +394,7 @@ def add_email(*args):
     else:
         rec.email = Email(args[1])
         return f'Email address added successfully!'
+
 
 @input_error
 def add_home(*args):
@@ -408,9 +413,11 @@ def add_home(*args):
         rec.home = Home(full_home)
         return f'Home address added successfully!'
 
+
 @input_error
 def show_all(*args):  # Показує всі контакти
     return phone_book.show_all()
+
 
 @input_error
 def show_num(*args):  # Ітератор
@@ -421,15 +428,18 @@ def show_num(*args):  # Ітератор
             print(i2)
     return f'{len(phone_book.listdata)} profile(s) showed'
 
+
 @input_error
 def search_common(*args):  # Функція знаходить схоже в Імені контактів або в номері телефону
     result = AddressBook.search_common(*args)
     return result
 
+
 @input_error
 def show_profile(*args):  # Вивести номер або номери телефону контакту
     rec = phone_book[args[0]]
     return rec
+
 
 @input_error
 def change_phone(*args):  # Для change потрібно ввести Ім'я, Старий номер і Новий номер
@@ -439,10 +449,12 @@ def change_phone(*args):  # Для change потрібно ввести Ім'я,
             return rec.change(args[1], args[2])
     return f'{args[0]} isn`t exist in list of names'
 
+
 @input_error
 def delete_contact(*args):  # Для delete потрібно ввести Ім'я та Номер який хочете видалити
     func = phone_book.delete_contact(args[0])
     return func
+
 
 @input_error
 def delete_phone(*args):  # Для delete потрібно ввести Ім'я та Номер який хочете видалити
@@ -458,6 +470,7 @@ def birthday_in_n_days(*args):
     result = AddressBook.birthday_in_n_days(args[0])
     return result
 
+
 @input_error
 def days_to_birthday(*args): # Показує скільки днів до дня народження контакта
     for k, v in phone_book.items():
@@ -465,6 +478,7 @@ def days_to_birthday(*args): # Показує скільки днів до дн�
             rec = phone_book[args[0]]
             return rec.days_to_birthday()
     return f'{args[0]} isn`t exist in list of names'
+
 
 def bot_help(*args):
     return """
@@ -488,6 +502,7 @@ def bot_help(*args):
 
     "good bye", "close", "exit" - back to main menu.
     """
+
 
 COMMANDS = {  
     add_contact: ["add contact", "add c"],

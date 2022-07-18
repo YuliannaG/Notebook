@@ -1,0 +1,3 @@
+[console_scripts]
+smartbot = goit_project1.main:main
+
