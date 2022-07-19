@@ -155,5 +155,5 @@ if __name__ == '__main__':
             print('Folder is sorted, opening main menu')
             break
         else:
-            print('Such path or folder isn`t exsist, try again or type exit to go back into main menu')
+            print('Such path or folder isn`t exist, try again or type exit to go back into main menu')
 

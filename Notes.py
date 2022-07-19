@@ -1,5 +1,6 @@
 from collections import UserDict
 import shelve
+from interface import NotesOutput
 
 
 class Note:
@@ -272,7 +273,7 @@ def main():
         user_command = parse_command(user_input)
         if user_command == 'Unknown command':
             continue
-        result = user_command[0](user_command[1])
+        result = NotesOutput(user_command[0](user_command[1])).print_result()
         print(result)
         if result == 'Good bye!':
             break

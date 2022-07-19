@@ -2,6 +2,7 @@ import re
 from collections import UserDict
 from datetime import datetime, timedelta
 import shelve
+from interface import AddressOutput
 
 
 class AddressBook(UserDict):
@@ -510,22 +511,16 @@ COMMANDS = {
     add_birthday: ["add birthday", "add b"],
     add_email: ["add email", "add e"],
     add_home: ["add home", "add h"],
-
     show_all: ["show all", "show a"],
     show_num: ["show num", "show n"], # цю функцію можна не описувати
     show_profile: ["show profile", "show p"],
     search_common: ["search common"],
-
     change_phone: ["c p", "change phone"],
-
     delete_contact: ["delete contact", "d c"],
     delete_phone: ["delete phone", "d p"],
-
     birthday_in_n_days:["birthday after", "b a"],
     days_to_birthday: ["days to birthday", "d t b"],
-
     bot_help: ["help"],
-    
     exit: ["good bye", "close", "exit", "."],
 }
 
@@ -533,7 +528,7 @@ COMMANDS = {
 ### Парсер команд
 
 def parse_command(user_input:str):
-    for k,v in COMMANDS.items():
+    for k, v in COMMANDS.items():
         for i in v:
             if user_input.lower().startswith(i.lower()):
                 return k, user_input[len(i):].strip().split(" ")
@@ -545,12 +540,13 @@ def main():
     phone_book.load(filename)
     while True:
         user_input = input("Please, enter command: ")
-        result, data = parse_command(user_input)
-        if result == 'Unknown command':
-            print(f'{result}: {data}.\nType help to see list of commands.')
+        command, data = parse_command(user_input)
+        if command == 'Unknown command':
+            print(f'{command}: {data}.\nType help to see list of commands.')
             continue
-        print(result(*data))
-        if result is exit:
+        result = AddressOutput(command(*data)).print_result()
+        print(result)
+        if command is exit:
             break
     phone_book.save_close(filename)
 
