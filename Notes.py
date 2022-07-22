@@ -1,6 +1,6 @@
-from collections import UserDict
+from collections import UserDict, UserList
 import shelve
-from interface import NotesOutput
+from interface import *
 
 
 class Note:
@@ -78,6 +78,44 @@ class Notebook(UserDict):
         else:
             return None
 
+    def search_by_tag(self, search_word: str):
+        search_output = NoteRecordList()
+        for rec in self.values():
+            for t in rec.tags:
+                if search_word in str(t):
+                    search_output.append(rec)
+        return search_output
+
+    def search_in_note(self, search_word: str):
+        search_output = NoteRecordList()
+        for rec in self.values():
+            if search_word in str(rec.note):
+                search_output.append(rec)
+        return search_output
+
+
+class NoteRecordList(UserList):
+    def __init__(self, data: list = None):
+        if data:
+            self.data = data
+        else:
+            self.data = []
+
+    def fill(self, any_notebook: Notebook):
+        self.data = [v for v in any_notebook.values()]
+
+    def numbering(self):
+        result = ''
+        if len(self.data) == 0:
+            raise KeyError
+        for num, item in enumerate(self.data, 1):
+            result += f'{num} {item}\n'
+        return result.strip()
+
+    def save_to_last_search(self):
+        global last_search
+        last_search = self.data
+
 
 def input_error_note(func):
     def inner(*args):
@@ -89,9 +127,8 @@ def input_error_note(func):
             return 'No tags records in the notebook.'
         except ValueError:
             return 'Search the note first.'
-        except TypeError:
-            return 'Note changed'
-
+        # except TypeError:
+        #     return 'Note changed'
     return inner
 
 
@@ -112,45 +149,23 @@ def add_note(note: Note):
 
 @input_error_note
 def show_all(*args):
-    notes_list = [v for v in notebook.values()]
-    global last_search
-    last_search = notes_list
-    result = ''
-    if len(notes_list) == 0:
-        raise KeyError
-    for num, item in enumerate(notes_list, 1):
-        result += f'{num} {item}\n'
-    return result.strip()
+    notes_list = NoteRecordList()
+    notes_list.fill(notebook)
+    notes_list.save_to_last_search()
+    return notes_list.numbering()
 
 
 @input_error_note
 def search(search_info):
-    search_output = []
-    search_output_rec = []
-    result = ''
     if search_info.lower().startswith('by tag'):
         search_tag = search_info[7:].strip()
-        for rec in notebook.values():
-            for t in rec.tags:
-                if search_tag in str(t):
-                    search_output.append(rec.note)
-                    search_output_rec.append(rec)
+        search_output = notebook.search_by_tag(search_tag)
     else:
-        for rec in notebook.values():
-            if search_info in str(rec.note):
-                search_output.append(rec)
-                search_output_rec.append(rec)
-            for t in rec.tags:
-                if search_info in str(t):
-                    search_output.append(rec)
-                    search_output_rec.append(rec)
-    if len(search_output) == 0:
-        raise KeyError
-    global last_search
-    last_search = search_output_rec
-    for num, item in enumerate(search_output, 1):
-        result += f'{num}   {item}\n'
-    return result.strip()
+        search_output = notebook.search_by_tag(search_info)
+        for i in notebook.search_in_note(search_info):
+            search_output.append(i)
+    search_output.save_to_last_search()
+    return search_output.numbering()
 
 
 @input_error_note
@@ -242,6 +257,8 @@ def func_exit(*args):
     return 'Good bye!'
 
 
+
+
 notebook = Notebook()
 filename = 'some_db'
 last_search = []
@@ -273,8 +290,9 @@ def main():
         user_command = parse_command(user_input)
         if user_command == 'Unknown command':
             continue
-        result = NotesOutput(user_command[0](user_command[1])).print_result()
-        print(result)
+        result = user_command[0](user_command[1])
+        output_code(CreatorConsole(result))
+        output_code(CreatorWeb(result))
         if result == 'Good bye!':
             break
 

@@ -2,7 +2,7 @@ import re
 from collections import UserDict
 from datetime import datetime, timedelta
 import shelve
-from interface import AddressOutput
+from interface import ConsoleOutput
 
 
 class AddressBook(UserDict):
@@ -544,7 +544,7 @@ def main():
         if command == 'Unknown command':
             print(f'{command}: {data}.\nType help to see list of commands.')
             continue
-        result = AddressOutput(command(*data)).print_result()
+        result = command(*data)
         print(result)
         if command is exit:
             break
