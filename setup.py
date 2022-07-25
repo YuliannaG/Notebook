@@ -3,7 +3,7 @@ from setuptools import setup, find_namespace_packages
 setup(
     name='smart_bot',
     version='0.1.0',
-    description='bot with function adressbook, notes and sorter',
+    description='Chatbot with functions Addressbook, Notes and Sorter',
     author='YuliannaG, AndrewAndrunin, vitaliy-2607',
     author_email='yulianna.iva@gmail.com',
     license='MIT',
@@ -14,5 +14,5 @@ setup(
     ],
     packages=find_namespace_packages(),
     entry_points={'console_scripts': [
-        'smartbot=goit_project1.main:main']}
+        'smartbot=main:main']}
 )

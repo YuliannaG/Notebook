@@ -1,4 +1,4 @@
-from collections import UserDict, UserList
+from collections import UserDict, UserList, OrderedDict
 import shelve
 from interface import *
 
@@ -185,7 +185,7 @@ def change(my_input):
             counter += 1
         last_search = []
         notebook.save_to_file()
-        raise TypeError
+        return 'Note changed'
     else:
         return 'Please, enter number of the note you want to change followed by the new note text.'
 
@@ -257,8 +257,6 @@ def func_exit(*args):
     return 'Good bye!'
 
 
-
-
 notebook = Notebook()
 filename = 'some_db'
 last_search = []
@@ -291,11 +289,15 @@ def main():
         if user_command == 'Unknown command':
             continue
         result = user_command[0](user_command[1])
-        output_code(CreatorConsole(result))
-        output_code(CreatorWeb(result))
+        print(result)
+        # output_code(CreatorConsole(result))
+        # output_code(CreatorWeb(result))
         if result == 'Good bye!':
             break
 
 
 if __name__ == "__main__":
+    load(filename)
+    print(show_all())
+    print(notebook[0])
     main()
