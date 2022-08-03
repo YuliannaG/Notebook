@@ -2,6 +2,8 @@ from pathlib import Path
 import shutil
 import file_parser as parser
 import re
+from threading import Thread
+
 
 CYRILLIC_SYMBOLS = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'
 TRANSLATION = ("a", "b", "v", "g", "d", "e", "e", "j", "z", "i", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
@@ -17,10 +19,6 @@ def normalize(name: str) -> str:
     t_name = name.translate(TRANS)
     t_name = re.sub(r'\W', '_', t_name)
     return t_name
-
-
-
-
 
 
 def handle_media(filename: Path, target_folder: Path):
@@ -63,61 +61,24 @@ def handle_folder(folder: Path):
 def main(folder: Path):
     parser.scan(folder)
 
-    for file in parser.JPEG_IMAGES:
+    for file in parser.IMAGES:
         handle_media(file, folder / 'images')
-    for file in parser.JPG_IMAGES:
-        handle_media(file, folder / 'images')
-    for file in parser.PNG_IMAGES:
-        handle_media(file, folder / 'images')
-    for file in parser.SVG_IMAGES:
-        handle_media(file, folder / 'images')
-
-    for file in parser.AVI_VIDEO:
-        handle_media(file, folder / 'videos')    
-    for file in parser.MP4_VIDEO:
-        handle_media(file, folder / 'videos') 
-    for file in parser.MKV_VIDEO:
-        handle_media(file, folder / 'videos') 
-    for file in parser.MOV_VIDEO:
+    for file in parser.VIDEO:
         handle_media(file, folder / 'videos')
-
-    for file in parser.DOC_DOCUMENTS:
-        handle_media(file, folder / 'documents')  
-    for file in parser.DOCX_DOCUMENTS:
+    for file in parser.DOCUMENTS:
         handle_media(file, folder / 'documents')
-    for file in parser.TXT_DOCUMENTS:
-        handle_media(file, folder / 'documents')  
-    for file in parser.PDF_DOCUMENTS:
-        handle_media(file, folder / 'documents')  
-    for file in parser.XLSX_DOCUMENTS:
-        handle_media(file, folder / 'documents')  
-    for file in parser.PPTX_DOCUMENTS:
-        handle_media(file, folder / 'documents')                                  
-
-    for file in parser.MP3_AUDIO:
+    for file in parser.AUDIO:
         handle_media(file, folder / 'audio')
-    for file in parser.OGG_AUDIO:
-        handle_media(file, folder / 'audio')
-    for file in parser.WAV_AUDIO:
-        handle_media(file, folder / 'audio')
-    for file in parser.AMR_AUDIO:
-        handle_media(file, folder / 'audio')
-
     for file in parser.OTHER:
         handle_other(file, folder / 'OTHER')
-
-    for file in parser.ZIP_ARCHIVES:
-        handle_archive(file, folder / 'archives')
-    for file in parser.GZ_ARCHIVES:
-        handle_archive(file, folder / 'archives')
-    for file in parser.TAR_ARCHIVES:
+    for file in parser.ARCHIVES:
         handle_archive(file, folder / 'archives')
 
-
-
+    #print([el for i in iter(parser.FOLDERS.get,None)])
     # Выполняем реверс списка для того, чтобы все папки удалить.
-    for folder in parser.FOLDERS[::-1]:
+    for folder in list(parser.FOLDERS.queue)[::-1]:
         handle_folder(folder)
+
 
 def sorter():
     while True:
@@ -134,7 +95,6 @@ def sorter():
             break
         else:
             print('Such path or folder isn`t exsist, try again or type exit to go back into main menu')
-
 
 
 if __name__ == '__main__':
@@ -155,5 +115,5 @@ if __name__ == '__main__':
             print('Folder is sorted, opening main menu')
             break
         else:
-            print('Such path or folder isn`t exist, try again or type exit to go back into main menu')
+            print('Such path or folder doesn`t exist, try again or type exit to go back into main menu')
 
