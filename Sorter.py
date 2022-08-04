@@ -3,7 +3,7 @@ import shutil
 import file_parser as parser
 import re
 from threading import Thread
-
+from collections import defaultdict
 
 CYRILLIC_SYMBOLS = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'
 TRANSLATION = ("a", "b", "v", "g", "d", "e", "e", "j", "z", "i", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
@@ -17,18 +17,33 @@ for c, l in zip(CYRILLIC_SYMBOLS, TRANSLATION):
 
 def normalize(name: str) -> str:
     t_name = name.translate(TRANS)
-    t_name = re.sub(r'\W', '_', t_name)
+    t_name = re.sub(r'\W(?!.)', '_', t_name)
     return t_name
+
+
+def ext_mapping(container: defaultdict):
+    mapping = {
+        'images': ['JPEG', 'PNG', 'JPG', 'SVG'],
+        'video': ['AVI', 'MP4', 'MKV', 'MOV'],
+        'audio': ['MP3', 'OGG', 'WAV', 'AMR'],
+        'documents': ['DOC', 'DOCX', 'TXT', 'PDF', 'XLSX', 'XLS', 'PPTX'],
+        'archives': ['ZIP', 'GZ', 'TAR'],
+        'other':[]
+    }
+    for ext in container.keys():
+        if not any(ext in val for val in mapping.values()):
+            mapping['other'].append(ext)
+    return mapping
 
 
 def handle_media(filename: Path, target_folder: Path):
     target_folder.mkdir(exist_ok=True, parents=True)
-    filename.replace(target_folder / (normalize(filename.name) + filename.suffix))
+    filename.replace(target_folder / (normalize(filename.name)))
 
 
 def handle_other(filename: Path, target_folder: Path):
     target_folder.mkdir(exist_ok=True, parents=True)
-    filename.replace(target_folder / (normalize(filename.name) + filename.suffix))
+    filename.replace(target_folder / (normalize(filename.name)))
 
 
 def handle_archive(filename: Path, target_folder: Path):
@@ -59,24 +74,33 @@ def handle_folder(folder: Path):
 
 
 def main(folder: Path):
-    parser.scan(folder)
+    old_folders = parser.old_folders(folder)
+    container = parser.scan(folder)
+    mapping = ext_mapping(container)
+    # for vs in container.values():
+    #     for v in vs:
+    #         print(v)
+    #         print(v.name)
+    #         print(normalize(v.name))
+    # print("folders are being sorted")
+    for ext, paths in container.items():
+        for file_path in paths:
+            if ext in mapping['archives']:
+                handle_archive(file_path, folder / 'archives')
+            if ext in mapping['video']:
+                handle_media(file_path, folder / 'video')
+            if ext in mapping['audio']:
+                handle_media(file_path, folder / 'audio')
+            if ext in mapping['documents']:
+                handle_media(file_path, folder / 'documents')
+            if ext in mapping['images']:
+                handle_media(file_path, folder / 'images')
+            if ext in mapping['other']:
+                handle_other(file_path, folder / 'other')
+            else:
+                print(f'Something went wrong with file {ext}, {file_path}')
 
-    for file in parser.IMAGES:
-        handle_media(file, folder / 'images')
-    for file in parser.VIDEO:
-        handle_media(file, folder / 'videos')
-    for file in parser.DOCUMENTS:
-        handle_media(file, folder / 'documents')
-    for file in parser.AUDIO:
-        handle_media(file, folder / 'audio')
-    for file in parser.OTHER:
-        handle_other(file, folder / 'OTHER')
-    for file in parser.ARCHIVES:
-        handle_archive(file, folder / 'archives')
-
-    #print([el for i in iter(parser.FOLDERS.get,None)])
-    # Выполняем реверс списка для того, чтобы все папки удалить.
-    for folder in list(parser.FOLDERS.queue)[::-1]:
+    for folder in list(old_folders)[::-1]:
         handle_folder(folder)
 
 
@@ -94,7 +118,7 @@ def sorter():
             print(f'Folder is sorted, opening main menu')
             break
         else:
-            print('Such path or folder isn`t exsist, try again or type exit to go back into main menu')
+            print('Such path or folder isn`t exist, try again or type exit to go back into main menu')
 
 
 if __name__ == '__main__':
