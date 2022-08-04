@@ -3,7 +3,7 @@ import shutil
 import file_parser as parser
 import re
 from threading import Thread
-from collections import defaultdict
+
 
 CYRILLIC_SYMBOLS = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'
 TRANSLATION = ("a", "b", "v", "g", "d", "e", "e", "j", "z", "i", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
@@ -21,16 +21,16 @@ def normalize(name: str) -> str:
     return t_name
 
 
-def ext_mapping(container: defaultdict):
+def ext_mapping(container: dict):
     mapping = {
         'images': ['JPEG', 'PNG', 'JPG', 'SVG'],
         'video': ['AVI', 'MP4', 'MKV', 'MOV'],
         'audio': ['MP3', 'OGG', 'WAV', 'AMR'],
         'documents': ['DOC', 'DOCX', 'TXT', 'PDF', 'XLSX', 'XLS', 'PPTX'],
         'archives': ['ZIP', 'GZ', 'TAR'],
-        'other':[]
+        'other': []
     }
-    for ext in container.keys():
+    for ext in container.values():
         if not any(ext in val for val in mapping.values()):
             mapping['other'].append(ext)
     return mapping
@@ -73,32 +73,35 @@ def handle_folder(folder: Path):
         print(f'{folder} isn`t deleted')
 
 
+def resorting(container: dict, folder: Path):
+    mapping = ext_mapping(container)
+    for path, ext in container.items():
+        if ext in mapping['archives']:
+            handle_archive(path, folder / 'archives')
+        elif ext in mapping['video']:
+            handle_media(path, folder / 'video')
+        elif ext in mapping['audio']:
+            handle_media(path, folder / 'audio')
+        elif ext in mapping['documents']:
+            handle_media(path, folder / 'documents')
+        elif ext in mapping['images']:
+            handle_media(path, folder / 'images')
+        elif ext in mapping['other']:
+            handle_other(path, folder / 'other')
+        else:
+            print(f'Something went wrong with file {ext}, {path}')
+
+
 def main(folder: Path):
     old_folders = parser.old_folders(folder)
     container = parser.scan(folder)
-    mapping = ext_mapping(container)
-    # for vs in container.values():
-    #     for v in vs:
-    #         print(v)
-    #         print(v.name)
-    #         print(normalize(v.name))
-    # print("folders are being sorted")
-    for ext, paths in container.items():
-        for file_path in paths:
-            if ext in mapping['archives']:
-                handle_archive(file_path, folder / 'archives')
-            if ext in mapping['video']:
-                handle_media(file_path, folder / 'video')
-            if ext in mapping['audio']:
-                handle_media(file_path, folder / 'audio')
-            if ext in mapping['documents']:
-                handle_media(file_path, folder / 'documents')
-            if ext in mapping['images']:
-                handle_media(file_path, folder / 'images')
-            if ext in mapping['other']:
-                handle_other(file_path, folder / 'other')
-            else:
-                print(f'Something went wrong with file {ext}, {file_path}')
+
+    # option 1, no threads
+    # resorting(container, folder)
+
+    # option 2, threads
+    threads = [Thread(target=resorting, args=(container, folder)) for _ in range(3)]
+    [thread.start() for thread in threads]
 
     for folder in list(old_folders)[::-1]:
         handle_folder(folder)
@@ -122,11 +125,6 @@ def sorter():
 
 
 if __name__ == '__main__':
-    # print("Print a full way to folder which you wont to sort")
-    # user_input = input(">>>")
-    # folder_for_scan = Path(user_input)
-    # print(f'Start in folder {folder_for_scan.resolve()}')
-    # main(folder_for_scan.resolve())
     while True:
         print("Print a full way to folder which you want to sort")
         user_input = input(">>>")

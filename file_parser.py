@@ -1,21 +1,4 @@
-import queue
-import sys
 from pathlib import Path
-from threading import Thread
-from collections import defaultdict
-
-IMAGES = []
-VIDEO = []
-DOCUMENTS = []
-AUDIO = []
-ARCHIVES = []
-OTHER = []
-
-
-THREAD_POOL_SIZE = 5
-FOLDERS = []
-EXTENSIONS = set()
-UNKNOWN = set()
 
 
 def get_extension(filename: str) -> str:
@@ -31,14 +14,14 @@ def old_folders(folder: Path):
     return folders_to_delete
 
 
-def scan(folder: Path) -> {str: Path}:
-    container = defaultdict(list)
+def scan(folder: Path) -> {Path: str}:
+    container = {}
     for item in list(folder.glob('**/*.*')):
         ext = get_extension(item.name)
-        if not ext:  # если у файла нет расширения добавить к неизвестным
-            container['OTHER'].append(item)
+        if not ext:
+            container[item] = 'OTHER'
         else:
-            container[ext].append(item)
+            container[item] = ext
     return container
 
 
