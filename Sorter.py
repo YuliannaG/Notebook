@@ -2,8 +2,6 @@ from pathlib import Path
 import shutil
 import file_parser as parser
 import re
-from threading import Thread
-
 
 CYRILLIC_SYMBOLS = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'
 TRANSLATION = ("a", "b", "v", "g", "d", "e", "e", "j", "z", "i", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
@@ -17,33 +15,22 @@ for c, l in zip(CYRILLIC_SYMBOLS, TRANSLATION):
 
 def normalize(name: str) -> str:
     t_name = name.translate(TRANS)
-    t_name = re.sub(r'\W(?!.)', '_', t_name)
+    t_name = re.sub(r'\W', '_', t_name)
     return t_name
 
 
-def ext_mapping(container: dict):
-    mapping = {
-        'images': ['JPEG', 'PNG', 'JPG', 'SVG'],
-        'video': ['AVI', 'MP4', 'MKV', 'MOV'],
-        'audio': ['MP3', 'OGG', 'WAV', 'AMR'],
-        'documents': ['DOC', 'DOCX', 'TXT', 'PDF', 'XLSX', 'XLS', 'PPTX'],
-        'archives': ['ZIP', 'GZ', 'TAR'],
-        'other': []
-    }
-    for ext in container.values():
-        if not any(ext in val for val in mapping.values()):
-            mapping['other'].append(ext)
-    return mapping
+
+
 
 
 def handle_media(filename: Path, target_folder: Path):
     target_folder.mkdir(exist_ok=True, parents=True)
-    filename.replace(target_folder / (normalize(filename.name)))
+    filename.replace(target_folder / (normalize(filename.name) + filename.suffix))
 
 
 def handle_other(filename: Path, target_folder: Path):
     target_folder.mkdir(exist_ok=True, parents=True)
-    filename.replace(target_folder / (normalize(filename.name)))
+    filename.replace(target_folder / (normalize(filename.name) + filename.suffix))
 
 
 def handle_archive(filename: Path, target_folder: Path):
@@ -73,39 +60,64 @@ def handle_folder(folder: Path):
         print(f'{folder} isn`t deleted')
 
 
-def resorting(container: dict, folder: Path):
-    mapping = ext_mapping(container)
-    for path, ext in container.items():
-        if ext in mapping['archives']:
-            handle_archive(path, folder / 'archives')
-        elif ext in mapping['video']:
-            handle_media(path, folder / 'video')
-        elif ext in mapping['audio']:
-            handle_media(path, folder / 'audio')
-        elif ext in mapping['documents']:
-            handle_media(path, folder / 'documents')
-        elif ext in mapping['images']:
-            handle_media(path, folder / 'images')
-        elif ext in mapping['other']:
-            handle_other(path, folder / 'other')
-        else:
-            print(f'Something went wrong with file {ext}, {path}')
-
-
 def main(folder: Path):
-    old_folders = parser.old_folders(folder)
-    container = parser.scan(folder)
+    parser.scan(folder)
 
-    # option 1, no threads
-    # resorting(container, folder)
+    for file in parser.JPEG_IMAGES:
+        handle_media(file, folder / 'images')
+    for file in parser.JPG_IMAGES:
+        handle_media(file, folder / 'images')
+    for file in parser.PNG_IMAGES:
+        handle_media(file, folder / 'images')
+    for file in parser.SVG_IMAGES:
+        handle_media(file, folder / 'images')
 
-    # option 2, threads
-    threads = [Thread(target=resorting, args=(container, folder)) for _ in range(3)]
-    [thread.start() for thread in threads]
+    for file in parser.AVI_VIDEO:
+        handle_media(file, folder / 'videos')    
+    for file in parser.MP4_VIDEO:
+        handle_media(file, folder / 'videos') 
+    for file in parser.MKV_VIDEO:
+        handle_media(file, folder / 'videos') 
+    for file in parser.MOV_VIDEO:
+        handle_media(file, folder / 'videos')
 
-    for folder in list(old_folders)[::-1]:
+    for file in parser.DOC_DOCUMENTS:
+        handle_media(file, folder / 'documents')  
+    for file in parser.DOCX_DOCUMENTS:
+        handle_media(file, folder / 'documents')
+    for file in parser.TXT_DOCUMENTS:
+        handle_media(file, folder / 'documents')  
+    for file in parser.PDF_DOCUMENTS:
+        handle_media(file, folder / 'documents')  
+    for file in parser.XLSX_DOCUMENTS:
+        handle_media(file, folder / 'documents')  
+    for file in parser.PPTX_DOCUMENTS:
+        handle_media(file, folder / 'documents')                                  
+
+    for file in parser.MP3_AUDIO:
+        handle_media(file, folder / 'audio')
+    for file in parser.OGG_AUDIO:
+        handle_media(file, folder / 'audio')
+    for file in parser.WAV_AUDIO:
+        handle_media(file, folder / 'audio')
+    for file in parser.AMR_AUDIO:
+        handle_media(file, folder / 'audio')
+
+    for file in parser.OTHER:
+        handle_other(file, folder / 'OTHER')
+
+    for file in parser.ZIP_ARCHIVES:
+        handle_archive(file, folder / 'archives')
+    for file in parser.GZ_ARCHIVES:
+        handle_archive(file, folder / 'archives')
+    for file in parser.TAR_ARCHIVES:
+        handle_archive(file, folder / 'archives')
+
+
+
+    # Выполняем реверс списка для того, чтобы все папки удалить.
+    for folder in parser.FOLDERS[::-1]:
         handle_folder(folder)
-
 
 def sorter():
     while True:
@@ -121,10 +133,16 @@ def sorter():
             print(f'Folder is sorted, opening main menu')
             break
         else:
-            print('Such path or folder isn`t exist, try again or type exit to go back into main menu')
+            print('Such path or folder isn`t exsist, try again or type exit to go back into main menu')
+
 
 
 if __name__ == '__main__':
+    # print("Print a full way to folder which you wont to sort")
+    # user_input = input(">>>")
+    # folder_for_scan = Path(user_input)
+    # print(f'Start in folder {folder_for_scan.resolve()}')
+    # main(folder_for_scan.resolve())
     while True:
         print("Print a full way to folder which you want to sort")
         user_input = input(">>>")
@@ -137,5 +155,5 @@ if __name__ == '__main__':
             print('Folder is sorted, opening main menu')
             break
         else:
-            print('Such path or folder doesn`t exist, try again or type exit to go back into main menu')
+            print('Such path or folder isn`t exist, try again or type exit to go back into main menu')
 
