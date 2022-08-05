@@ -1,4 +1,3 @@
-from pathlib import Path
 import shutil
 import re
 from threading import Thread
@@ -24,7 +23,7 @@ def normalize(name: str) -> str:
 
 def old_folders(folder: Path):
     folders_to_delete = []
-    for item in folder.glob('**/*'):
+    for item in folder.iterdir():
         if item.is_dir():
             if item.name not in MAPPING:
                 folders_to_delete.append(item)
@@ -49,7 +48,8 @@ MAPPING = {
     'video': ['.AVI', '.MP4', '.MKV', '.MOV'],
     'audio': ['.MP3', '.OGG', '.WAV', '.AMR'],
     'documents': ['.DOC', '.DOCX', '.TXT', '.PDF', '.XLSX', '.XLS', '.PPTX'],
-    'archives': ['.ZIP', '.GZ', '.TAR']
+    'archives': ['.ZIP', '.GZ', '.TAR'],
+    'other': []
 }
 
 
@@ -85,19 +85,20 @@ def get_folder(ext: str) -> str:
 
 
 def resorting(container: Dict[str, List[Path]], main_path: Path):
-    for ext, items in container.items():
-        sort_folder = get_folder(ext)
-        if not (main_path / sort_folder).exists():
-            (main_path / sort_folder).mkdir()
-        for item in items:
-            if sort_folder == 'archives':
-                handle_archive(item, main_path / sort_folder)
-            else:
-                item.replace(main_path / sort_folder / normalize(item.name))
-
+    try:
+        for ext, items in container.items():
+            sort_folder = get_folder(ext)
+            if not (main_path / sort_folder).exists():
+                (main_path / sort_folder).mkdir()
+            for item in items:
+                if sort_folder == 'archives':
+                    handle_archive(item, main_path / sort_folder)
+                else:
+                    item.replace(main_path / sort_folder / normalize(item.name))
+    except FileNotFoundError:
+        pass
 
 def main(folder: Path, options: int = 1):
-    my_old_folders = old_folders(folder)
     container = scan(folder)
     match options:
         case 0:
@@ -105,7 +106,9 @@ def main(folder: Path, options: int = 1):
         case 1:
             threads = [Thread(target=resorting, args=(container, folder)) for _ in range(3)]
             [thread.start() for thread in threads]
+            [thread.join() for thread in threads]
 
+    my_old_folders = old_folders(folder)
     for folder in list(my_old_folders)[::-1]:
         handle_folder(folder)
 
@@ -128,17 +131,4 @@ def sorter():
 
 
 if __name__ == '__main__':
-    while True:
-        print("Print a full way to folder which you want to sort")
-        user_input = input(">>>")
-        if user_input.lower() == 'exit':
-            break        
-        folder_for_scan = Path(user_input)
-        if folder_for_scan.exists():
-            print(f'Start in folder {folder_for_scan.resolve()}')
-            main(folder_for_scan.resolve())
-            print('Folder is sorted, opening main menu')
-            break
-        else:
-            print('Such path or folder does not exist, try again or type exit to go back into main menu')
-
+    main(Path(r'C:\Users\yulia\Documents\Python\test_sorter'))
