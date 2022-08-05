@@ -34,12 +34,11 @@ class NoteRecord(UserDict):
     def add_tag(self):
         while True:
             tag_input = input('Please, add tag name or skip:')
-            if not tag_input:
-                break
             my_tag = Tag(tag_input)
+            if tag_input == "":
+                break
             if my_tag.value not in [t.value for t in self.tags]:
                 self.tags.append(my_tag)
-        return self.tags
 
 
 class Notebook(UserDict):
@@ -53,16 +52,16 @@ class Notebook(UserDict):
     def add_note(self, note: Note):
         my_note = Note(note)
         rec = NoteRecord(my_note)
-        self.data[my_note.value] = rec.tags
+        self.data[rec.note.value] = rec
         return rec.add_tag()
 
-    def delete_note(self, note: Note):
+    def delete_note(self, rec: NoteRecord):
         for k, v in self.data.items():
-            #if isinstance(note, NoteRecord):
-            if k == note.value:
-                deleted_note = k
-                self.data.pop(k)
-                return deleted_note
+            # if isinstance(v, NoteRecord):
+                if v.note == rec.note:
+                    deleted_note = v.note
+                    self.data.pop(k)
+                    return deleted_note
 
     def save_to_file(self):
         with shelve.open(filename) as db:
@@ -70,54 +69,66 @@ class Notebook(UserDict):
 
     def get_tags(self):
         tags_list = []
-        for tags in self.values():
-            for tag in tags:
-                tags_list.append(str(tag))
+        for rec in self.values():
+            for t in rec.tags:
+                tags_list.append(str(t))
+        if len(tags_list) > 0:
             tags_set = sorted(set(tags_list), reverse=False)
             return tags_set
         else:
             return None
 
     def search_by_tag(self, search_word: str):
-        search_output = Notebook()
-        for note, tags in self.items():
-            for t in tags:
+        search_output = NoteRecordList()
+        for rec in self.values():
+            for t in rec.tags:
                 if search_word in str(t):
-                    search_output[note] = tags
+                    search_output.append(rec)
         return search_output
 
     def search_in_note(self, search_word: str):
-        search_output = Notebook()
-        for note, tags in self.items():
-            if search_word in str(note):
-                search_output[note] = tags
+        search_output = NoteRecordList()
+        for rec in self.values():
+            if search_word in str(rec.note):
+                search_output.append(rec)
         return search_output
 
-    def save_to_last_search(self):
-        global last_search
-        last_search = self.data.copy()
+
+class NoteRecordList(UserList):
+    def __init__(self, data: list = None):
+        if data:
+            self.data = data
+        else:
+            self.data = []
+
+    def fill(self, any_notebook: Notebook):
+        self.data = [v for v in any_notebook.values()]
 
     def numbering(self):
         result = ''
         if len(self.data) == 0:
-            return "No results"
-        for num, (note, tags) in enumerate(self.data.items(), 1):
-            result += f'{num} Note: {note}\nTags:{tags}\n'
+            raise KeyError
+        for num, item in enumerate(self.data, 1):
+            result += f'{num} {item}\n'
         return result.strip()
+
+    def save_to_last_search(self):
+        global last_search
+        last_search = self.data
 
 
 def input_error_note(func):
     def inner(*args):
         try:
             return func(*args)
-        # except KeyError:
-        #     return 'No records found'
-        # except IndexError:
-        #     return 'No tags records in the notebook.'
-        # except ValueError:
-        #     return 'Search the note first.'
-        except TypeError:
-            return 'Note changed'
+        except KeyError:
+            return 'No records found'
+        except IndexError:
+            return 'No tags records in the notebook.'
+        except ValueError:
+            return 'Search the note first.'
+        # except TypeError:
+        #     return 'Note changed'
     return inner
 
 
@@ -138,8 +149,10 @@ def add_note(note: Note):
 
 @input_error_note
 def show_all(*args):
-    notebook.save_to_last_search()
-    return notebook.numbering()
+    notes_list = NoteRecordList()
+    notes_list.fill(notebook)
+    notes_list.save_to_last_search()
+    return notes_list.numbering()
 
 
 @input_error_note
@@ -149,34 +162,28 @@ def search(search_info):
         search_output = notebook.search_by_tag(search_tag)
     else:
         search_output = notebook.search_by_tag(search_info)
-        for k, v in notebook.search_in_note(search_info).items():
-            search_output[k] = v
+        for i in notebook.search_in_note(search_info):
+            search_output.append(i)
     search_output.save_to_last_search()
     return search_output.numbering()
 
 
 @input_error_note
 def change(my_input):
-    global last_search
-    if not last_search:
-        raise ValueError
     commands = my_input.split(' ')
     num = commands[0]
     new_note = Note(my_input[len(num):].strip())
+    global last_search
+    if not last_search:
+        raise ValueError
     if int(num) > 0 and len(new_note.value) > 0:
         counter = 1
-        for note, tags in last_search.items():
+        for item in last_search:
             if counter == int(num):
-                note = Note(note)
-                old_tags = tags.copy()
-                print(old_tags)
-                notebook.delete_note(note)
-                notebook.add_note(new_note)
-                for t in old_tags:
-                    notebook[new_note] = list(set(notebook[new_note].append(t)))
-                print(notebook)
+                item.note = new_note
+                item.add_tag()
             counter += 1
-        last_search = {}
+        last_search = []
         notebook.save_to_file()
         return 'Note changed'
     else:
@@ -206,11 +213,10 @@ def delete(del_num):
     if not last_search:
         raise ValueError
     counter = 1
-    for k in last_search.keys():
+    for item in last_search:
         if counter == int(del_num):
-            k = Note(k)
-            result = notebook.delete_note(k)
-            last_search = {}
+            result = notebook.delete_note(item)
+            last_search = []
             notebook.save_to_file()
             return f'Note: "{result}" deleted.'
         counter += 1
@@ -253,7 +259,7 @@ def func_exit(*args):
 
 notebook = Notebook()
 filename = 'some_db'
-last_search = {}
+last_search = []
 COMMANDS = {search: ["search note"],
             func_exit: ["good bye", "close", "exit", "."],
             add_note: ["add note"],
@@ -291,7 +297,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # load(filename)
-    # print(show_all())
-    # print(notebook[0])
+    load(filename)
+    print(show_all())
+    print(notebook[0])
     main()
