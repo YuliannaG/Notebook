@@ -1,9 +1,10 @@
 import concurrent.futures
-import shutil
+import aioshutil
 import re
-from threading import Thread
 from pathlib import Path
 from typing import Dict, List
+import asyncio
+from aiopath import AsyncPath
 
 
 CYRILLIC_SYMBOLS = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'
@@ -54,21 +55,16 @@ MAPPING = {
 }
 
 
-def handle_archive(filename: Path, target_folder: Path):
-    target_folder.mkdir(exist_ok=True, parents=True)
-    #  Создаем папку куда распаковываем архив
-    # Берем суффикс у файла и убираем replace(filename.suffix, '')
-    folder_for_file = target_folder / \
-        normalize(filename.name.replace(filename.suffix, ''))
-    folder_for_file.mkdir(exist_ok=True, parents=True)
+async def handle_archive(filename: AsyncPath, archive_folder: AsyncPath):
+    folder_for_file = archive_folder / normalize(filename.name.replace(filename.suffix, ''))
+    await folder_for_file.mkdir(exist_ok=True, parents=True)
     try:
-        shutil.unpack_archive(str(filename.resolve()),
-                              str(folder_for_file.resolve()))
-    except shutil.ReadError:
+        await aioshutil.unpack_archive(await filename.resolve(), await folder_for_file.resolve())
+    except aioshutil.Error:
         print(f'This file is not archive:{filename}!')
-        folder_for_file.rmdir()
+        await folder_for_file.rmdir()
         return None
-    filename.unlink()
+    await filename.unlink()
 
 
 def handle_folder(folder: Path):
@@ -85,30 +81,34 @@ def get_folder(ext: str) -> str:
     return 'other'
 
 
-def resorting(container: Dict[str, List[Path]], main_path: Path):
+async def resorting(sort_queue: asyncio.Queue, folder: AsyncPath):
+    while True:
+        sort_folder, item = await sort_queue.get()
+        if sort_folder == 'archives':
+            await handle_archive(item, folder / sort_folder)
+        else:
+            await item.replace(folder / sort_folder / normalize(item.name))
+        sort_queue.task_done()
+
+
+async def main(folder: Path):
+    container = scan(folder)
+    sort_queue = asyncio.Queue()
     try:
         for ext, items in container.items():
             sort_folder = get_folder(ext)
-            if not (main_path / sort_folder).exists():
-                (main_path / sort_folder).mkdir()
+            if not (folder / sort_folder).exists():
+                (folder / sort_folder).mkdir()
             for item in items:
-                if sort_folder == 'archives':
-                    handle_archive(item, main_path / sort_folder)
-                else:
-                    item.replace(main_path / sort_folder / normalize(item.name))
+                item = AsyncPath(item)
+                await sort_queue.put((sort_folder, item))
     except FileNotFoundError:
         pass
-
-
-def main(folder: Path, options: int = 1):
-    container = scan(folder)
-    match options:
-        case 0:
-            resorting(container, folder)
-        case 1:
-            threads = [Thread(target=resorting, args=(container, folder)) for _ in range(3)]
-            [thread.start() for thread in threads]
-            [thread.join() for thread in threads]
+    sort_folder = AsyncPath(folder)
+    sorters = [asyncio.create_task(resorting(sort_queue, sort_folder)) for _ in range(1)]
+    await sort_queue.join()
+    for sorter_ in sorters:
+        sorter_.cancel()
 
     my_old_folders = old_folders(folder)
     for folder in list(my_old_folders)[::-1]:
@@ -121,11 +121,11 @@ def sorter():
         user_input = input(">>>")
         if user_input.lower() == 'exit' or user_input == '.':
             print(f'Opening main menu')
-            break        
+            break
         folder_for_scan = Path(user_input)
         if folder_for_scan.exists():
             print(f'Start in folder {folder_for_scan.resolve()}')
-            main(folder_for_scan.resolve())
+            asyncio.run(main(folder_for_scan.resolve()))
             print(f'Folder is sorted, opening main menu')
             break
         else:
@@ -133,4 +133,4 @@ def sorter():
 
 
 if __name__ == '__main__':
-    main(Path(r'C:\Users\yulia\Documents\Python\test_sorter'))
+    asyncio.run(main(Path(r'C:\Users\yulia\Documents\Python\test_sorter')))
